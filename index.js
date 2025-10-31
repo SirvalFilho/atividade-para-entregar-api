@@ -3,7 +3,12 @@ import cors from "cors";
 import crypto from "crypto";
 
 const server = express();
-server.use(cors({ origin: process.env.FRONTEND_URL || "*" }));
+server.use(
+  cors({
+    origin: process.env.FRONTEND_URL,
+    credentials: true,
+  })
+);
 server.use(express.json());
 
 let users = [];
