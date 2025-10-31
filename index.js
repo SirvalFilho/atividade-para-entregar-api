@@ -10,14 +10,13 @@ const corsOptions = {
     if (!origin) return callback(null, true);
 
     const allowedOrigins = [
-      process.env.FRONTEND_URL,
+      process.env.FRONTEND_URL || "http://localhost:3003",
       "http://localhost:3003",
       "http://localhost:5173",
       "http://localhost:4173",
     ].filter(Boolean); // Remove undefined/null
 
     if (!process.env.FRONTEND_URL) {
-      console.log("FRONTEND_URL não definida, permitindo todas as origens");
       return callback(null, true);
     }
 
@@ -28,8 +27,6 @@ const corsOptions = {
     ) {
       callback(null, true);
     } else {
-      console.log("Origem bloqueada:", origin);
-      console.log("Origens permitidas:", allowedOrigins);
       callback(null, true); // Temporariamente permitir para debug
     }
   },
@@ -151,23 +148,70 @@ server.get("/users/discover", authMiddleware, async (req, res) => {
   try {
     const currentUserId = req.current_user._id;
     const currentUserPreference = req.current_user.preference;
+    const currentUserGender = req.current_user.gender;
 
     const likedUserIds = likes
       .filter((like) => like.curtidor === currentUserId)
       .map((like) => like.curtido);
 
     const availableUsers = users.filter((u) => {
+      // Nunca mostrar o próprio usuário
       if (u._id === currentUserId) return false;
 
+      // Não mostrar usuários já curtidos
       if (likedUserIds.includes(u._id)) return false;
 
-      if (currentUserPreference === "Men" && u.gender !== "Male") return false;
-      if (currentUserPreference === "Women" && u.gender !== "Female")
-        return false;
-      if (currentUserPreference === "Both") return true;
-      if (currentUserPreference === "Other") return true;
+      // Lógica de compatibilidade de preferências
+      let isCompatible = false;
 
-      return true;
+      // Se eu prefiro homens
+      if (currentUserPreference === "Men") {
+        // Só mostrar se for homem E ele tiver preferência compatível comigo
+        if (u.gender === "Male") {
+          if (currentUserGender === "Male" && u.preference === "Men")
+            isCompatible = true;
+          if (currentUserGender === "Female" && u.preference === "Women")
+            isCompatible = true;
+          if (u.preference === "Both") isCompatible = true;
+          if (u.preference === "Other") isCompatible = true;
+        }
+      }
+      // Se eu prefiro mulheres
+      else if (currentUserPreference === "Women") {
+        // Só mostrar se for mulher E ela tiver preferência compatível comigo
+        if (u.gender === "Female") {
+          if (currentUserGender === "Male" && u.preference === "Men")
+            isCompatible = true;
+          if (currentUserGender === "Female" && u.preference === "Women")
+            isCompatible = true;
+          if (u.preference === "Both") isCompatible = true;
+          if (u.preference === "Other") isCompatible = true;
+        }
+      }
+      // Se eu prefiro ambos
+      else if (currentUserPreference === "Both") {
+        if (u.gender === "Male") {
+          if (currentUserGender === "Male" && u.preference === "Men")
+            isCompatible = true;
+          if (currentUserGender === "Female" && u.preference === "Women")
+            isCompatible = true;
+          if (u.preference === "Both") isCompatible = true;
+          if (u.preference === "Other") isCompatible = true;
+        } else if (u.gender === "Female") {
+          if (currentUserGender === "Male" && u.preference === "Men")
+            isCompatible = true;
+          if (currentUserGender === "Female" && u.preference === "Women")
+            isCompatible = true;
+          if (u.preference === "Both") isCompatible = true;
+          if (u.preference === "Other") isCompatible = true;
+        }
+      }
+      // Se eu prefiro outros
+      else if (currentUserPreference === "Other") {
+        isCompatible = true;
+      }
+
+      return isCompatible;
     });
 
     res.send(availableUsers);
@@ -247,5 +291,5 @@ server.get("/matches", authMiddleware, async (req, res) => {
   }
 });
 
-const port = process.env.PORT || 3000;
+const port = process.env.PORT || 3003;
 server.listen(port, () => console.log(`Server listening on ${port}`));
