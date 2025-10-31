@@ -3,12 +3,42 @@ import cors from "cors";
 import crypto from "crypto";
 
 const server = express();
-server.use(
-  cors({
-    origin: process.env.FRONTEND_URL,
-    credentials: true,
-  })
-);
+
+// Configuração CORS mais permissiva
+const corsOptions = {
+  origin: function (origin, callback) {
+    if (!origin) return callback(null, true);
+
+    const allowedOrigins = [
+      process.env.FRONTEND_URL,
+      "http://localhost:3003",
+      "http://localhost:5173",
+      "http://localhost:4173",
+    ].filter(Boolean); // Remove undefined/null
+
+    if (!process.env.FRONTEND_URL) {
+      console.log("FRONTEND_URL não definida, permitindo todas as origens");
+      return callback(null, true);
+    }
+
+    if (
+      allowedOrigins.some((allowed) =>
+        origin.includes(allowed.replace(/https?:\/\//, ""))
+      )
+    ) {
+      callback(null, true);
+    } else {
+      console.log("Origem bloqueada:", origin);
+      console.log("Origens permitidas:", allowedOrigins);
+      callback(null, true); // Temporariamente permitir para debug
+    }
+  },
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization", "user-token"],
+};
+
+server.use(cors(corsOptions));
 server.use(express.json());
 
 let users = [];
