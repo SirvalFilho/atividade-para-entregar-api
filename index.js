@@ -3,7 +3,7 @@ import cors from "cors";
 import crypto from "crypto";
 
 const server = express();
-server.use(cors());
+server.use(cors({ origin: process.env.FRONTEND_URL || "*" }));
 server.use(express.json());
 
 let users = [];
@@ -212,6 +212,5 @@ server.get("/matches", authMiddleware, async (req, res) => {
   }
 });
 
-server.listen(3003, () => {
-  console.log("Server running on http://localhost:3003");
-});
+const port = process.env.PORT || 3000;
+server.listen(port, () => console.log(`Server listening on ${port}`));
